@@ -1,0 +1,16 @@
+# Private: not part of the public submission
+CLAUDE.md
+.superpowers/
+Lila Game Designer.pdf
+.claude/
+
+# Build output and dependencies (CI rebuilds these)
+node_modules/
+dist/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

@@ -1,0 +1,85 @@
+DESIGN INSPO
+============
+
+
+PARTS
+-----
+
+Saw
+  - boomerang blade, short range, returns
+  - with Relay, blades bounce through the horde
+
+Hook (trigger)
+  - links two guns it touches: one gun's shot carries the other's as a payload released on impact. The rule for which is carrier must be easy to read; show a visible tether. (builder: rule TBD)
+
+Overclock (Chainsaw)
+  - touching guns fire 3× faster
+
+Relay (on kill)
+  - when a touching gun's shot kills, the gun's shot fires again from the corpse toward the next enemy. Kill chains jump across the horde. Proc decay: each hop is 50% as likely
+
+Mimic (Greek letters)
+  - becomes a copy of whatever part type it touches most. A Mimic touching two Mirrors is a Mirror
+
+Fire Cell
+  - Ignite
+  - shots ignite: 4 dmg/s for 3s. A burning enemy that dies bursts (1-cell radius, 8 dmg) and ignites what the burst hits
+  - same
+  - [P]
+
+
+ENEMY
+-----
+
+Shielder
+  - 40
+  - a front shield (a 120° arc) turns to face your Core and blocks every direct hit, beams included (a beam stops at the shield). It does not block area damage (Lobber splash, fire bursts, Sink orb blasts), burning already applied, or anything arriving from behind or the sides
+  - rewards non-straight combos: Periscope, Spinner, splash, payloads, Relay hops
+
+
+DESIGN NOTES
+------------
+
+- boss phases as in the space shooter game played in old laptop
+- make the components and everything octagon [shape movement and face-direction] in sync with the movement directions
+- archive also contain description of each individual module - also make the modules more understandable, keep it simple
+- make wrench scen more rich and icons better more sleak
+
+
+23. REFERENCES AND WHAT WE TOOK FROM EACH
+-----------------------------------------
+
+Noita
+  Taken: spells modify the next spell; order matters; triggers carry payloads; Chainsaw (junk becomes core); Divide's copy cap; Spells To Power
+  Done differently: spatial adjacency on a ship instead of a wand list; no self-damage; one thumb
+
+Captain Forever / Reassembly
+  Taken: the ship grows from enemy parts
+  Done differently: parts stick on contact with no build screen; combos instead of stats
+
+Katamari Damacy
+  Taken: things stick to you; the camera zooms out as you grow
+
+Vampire Survivors
+  Taken: auto-fire, drag-only, power fantasy
+  Done differently: no level-up menu; combos come from rules, not evolution recipes
+
+Binding of Isaac
+  Taken: some items replace your shot type (Tammy's Head + Brimstone)
+  Done differently: split what fires (guns) from how it's changed (boosters, chainers)
+
+Risk of Rain 2
+  Taken: proc chains with decay
+  Done differently: Relay's 100/50/25% hops
+
+Breath of the Wild
+  Taken: "chemistry engine": verbs act on targets, not on authored pairs
+  Done differently: one verb per part, and an interaction table instead of recipes
+
+Ball x Pit / Vampire Survivors evolutions
+  Taken: the joy of a named discovery
+  Done differently: named combos are recognized, not required recipes
+
+Backpack Battles
+  Taken: adjacency synergy
+  Done differently: the risk to avoid: combos must change behavior, not just add stats

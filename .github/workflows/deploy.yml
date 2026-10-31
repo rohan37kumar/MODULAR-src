@@ -1,0 +1,49 @@
+# Builds MODULAR (q1-game/) and publishes it to GitHub Pages on every update.
+# One-time setup: repo Settings → Pages → Build and deployment → Source: "GitHub Actions".
+name: Deploy MODULAR to GitHub Pages
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer update replaces a queued one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: q1-game
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: q1-game/package-lock.json
+      - run: npm ci
+      # The test suite gates the deploy: a red suite never reaches the live link.
+      - run: npx vitest run
+      # Typecheck + Vite build into q1-game/dist (relative paths, so any Pages sub-path works).
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: q1-game/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
