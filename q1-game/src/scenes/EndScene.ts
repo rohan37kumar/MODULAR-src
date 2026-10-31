@@ -5,6 +5,7 @@ import { Audio } from '../game/Audio';
 import { COLOURS, FONT } from '../game/runtime';
 import { downloadSnapshot, renderSnapshot, SNAPSHOT_H, SNAPSHOT_W } from '../game/snapshot';
 import { button } from '../game/ui';
+import { starTile, uiCamera, viewSize } from '../game/view';
 import { storage, type RunResult } from './GameScene';
 
 const SNAP_KEY = 'run-snapshot';
@@ -25,6 +26,7 @@ export class EndScene extends Phaser.Scene {
   }
 
   create(r: RunResult): void {
+    uiCamera(this);
     this.save = loadSave(storage());
     if (!r.recorded) {
       this.save = recordRun(this.save, { timeMs: r.timeMs, kills: r.kills });
@@ -32,7 +34,7 @@ export class EndScene extends Phaser.Scene {
     }
     this.result = { ...r, recorded: true };
     this.canvas = renderSnapshot(r.ship, {
-      timeMs: r.timeMs, kills: r.kills, salvage: r.salvage, newThisRun: r.newThisRun, firedThisRun: r.firedThisRun,
+      timeMs: r.timeMs, kills: r.kills, parts: r.parts, newThisRun: r.newThisRun, firedThisRun: r.firedThisRun,
       archiveCount: this.save.discovered.length, blueprints: r.blueprints,
     });
     if (this.textures.exists(SNAP_KEY)) this.textures.remove(SNAP_KEY);
@@ -50,8 +52,8 @@ export class EndScene extends Phaser.Scene {
 
   private build(): void {
     this.children.removeAll(true);
-    const { width: w, height: h } = this.scale;
-    this.add.tileSprite(w / 2, h / 2, w, h, 'stars-far').setAlpha(0.5);
+    const { w, h } = viewSize(this);
+    starTile(this, w / 2, h / 2, w, h, 'stars-far').setAlpha(0.5);
     const scale = Math.min((w - 24) / SNAPSHOT_W, (h - BUTTONS_H - 16) / SNAPSHOT_H);
     const imgH = SNAPSHOT_H * scale;
     this.add.image(w / 2, 12 + imgH / 2, SNAP_KEY).setScale(scale);

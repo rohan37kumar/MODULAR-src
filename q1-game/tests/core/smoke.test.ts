@@ -20,7 +20,7 @@ test('addendum parts', () => {
 });
 
 test('addendum enemy and saw tuning', () => {
-  expect(ENEMIES.shielder).toEqual({ hp: 40, speed: 95, radius: 10, contactDamage: 8, scrap: 3 });
+  expect(ENEMIES.shielder).toEqual({ hp: 40, speed: 95, radius: 10, contactDamage: 8 });
   expect(TUNING.weapons.saw).toMatchObject({ shape: 'bolt', pierce: 99, effects: ['boomerang'] });
   expect(TUNING.weapons.saw!.range).toBe(104);
 });

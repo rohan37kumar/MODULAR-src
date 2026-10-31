@@ -3,8 +3,9 @@ import type { PartId } from '../core/types';
 import { PART_SHAPES, partColour, REPAIR_CORE_SHAPE, WRENCH_SHAPE, type ShapePath } from '../data/partShapes';
 import { PART_IDS } from '../data/parts';
 import { partTexture } from '../game/Ship';
+import { setTextureScale, TEX } from '../game/view';
 
-/** Texture size for part icons; displayed at CELL (26 px) in the world and larger in the Forge. */
+/** Texture size for part icons at 1× density; displayed at CELL (26 px) in the world and larger in the Forge. */
 const PART_TEX = 64;
 
 /** Generates every texture procedurally (no network assets), then opens the Title. */
@@ -14,9 +15,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    for (const id of PART_IDS) this.shapeTexture(partTexture(id as PartId), PART_SHAPES[id as PartId], partColour(id as PartId), PART_TEX);
-    this.shapeTexture('pickup-forge', WRENCH_SHAPE, 0x00e5ff, PART_TEX);
-    this.shapeTexture('pickup-repair', REPAIR_CORE_SHAPE, 0x39ff88, PART_TEX);
+    setTextureScale(this.renderer.type === Phaser.WEBGL);
+    // Part icons are always shown with setDisplaySize, so they are simply drawn bigger on dense screens.
+    const partTex = PART_TEX * TEX;
+    for (const id of PART_IDS) this.shapeTexture(partTexture(id as PartId), PART_SHAPES[id as PartId], partColour(id as PartId), partTex);
+    this.shapeTexture('pickup-forge', WRENCH_SHAPE, 0x00e5ff, partTex);
+    this.shapeTexture('pickup-repair', REPAIR_CORE_SHAPE, 0x39ff88, partTex);
     this.enemyTextures();
     this.fxTextures();
     this.scene.start('Title');
@@ -47,22 +51,31 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
   }
 
+  /**
+   * Draws `draw` (in logical px) into a texture TEX× as dense. With `keepSize` the frame keeps the logical
+   * w × h and samples the whole dense image, so sprites display at their usual size, only sharper.
+   */
+  private dense(key: string, w: number, h: number, draw: (g: Phaser.GameObjects.Graphics) => void, keepSize = true): void {
+    const g = this.make.graphics({}, false);
+    draw(g);
+    g.setScale(TEX).generateTexture(key, w * TEX, h * TEX);
+    g.destroy();
+    if (keepSize && TEX !== 1) this.textures.get(key).get().setSize(w, h).setUVs(w * TEX, h * TEX, 0, 0, 1, 1);
+  }
+
   /** White enemy silhouettes, tinted at runtime (swarm colours, status tints, hit flash). Point up. */
   private enemyTextures(): void {
-    const poly = (key: string, w: number, h: number, pts: [number, number][], extra?: (g: Phaser.GameObjects.Graphics) => void) => {
-      const g = this.make.graphics({}, false);
-      const P = pts.map(([x, y]) => ({ x: x * w, y: y * h }));
-      g.fillStyle(0xffffff, 0.22).fillPoints(P, true);
-      g.lineStyle(2, 0xffffff, 1).strokePoints(P, true, true);
-      extra?.(g);
-      g.generateTexture(key, w, h);
-      g.destroy();
-    };
-    const mote = this.make.graphics({}, false);
-    mote.fillStyle(0xffffff, 0.35).fillCircle(7, 7, 7);
-    mote.fillStyle(0xffffff, 1).fillCircle(7, 7, 4);
-    mote.generateTexture('enemy-mote', 14, 14);
-    mote.destroy();
+    const poly = (key: string, w: number, h: number, pts: [number, number][], extra?: (g: Phaser.GameObjects.Graphics) => void) =>
+      this.dense(key, w, h, g => {
+        const P = pts.map(([x, y]) => ({ x: x * w, y: y * h }));
+        g.fillStyle(0xffffff, 0.22).fillPoints(P, true);
+        g.lineStyle(2, 0xffffff, 1).strokePoints(P, true, true);
+        extra?.(g);
+      });
+    this.dense('enemy-mote', 14, 14, g => {
+      g.fillStyle(0xffffff, 0.35).fillCircle(7, 7, 7);
+      g.fillStyle(0xffffff, 1).fillCircle(7, 7, 4);
+    });
     poly('enemy-drone', 24, 24, [[0.5, 0.04], [0.94, 0.94], [0.5, 0.72], [0.06, 0.94]]);
     poly('enemy-spitter', 26, 26, [[0.5, 0.04], [0.96, 0.5], [0.5, 0.96], [0.04, 0.5]], g => g.fillStyle(0xffffff, 1).fillCircle(13, 13, 3));
     poly('enemy-lancer', 18, 34, [[0.5, 0.02], [0.96, 0.22], [0.96, 0.78], [0.5, 0.98], [0.04, 0.78], [0.04, 0.22]]);
@@ -88,23 +101,17 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0xffffff, 1).fillCircle(38, 38, 8);
     });
     // Carrier phase 3: only the core remains, inside a hot ring (tinted swarm red at runtime).
-    const core = this.make.graphics({}, false);
-    core.lineStyle(6, 0xffffff, 0.25).strokeCircle(32, 32, 27);
-    core.fillStyle(0xffffff, 0.18).fillCircle(32, 32, 24);
-    core.lineStyle(2.5, 0xffffff, 1).strokeCircle(32, 32, 24);
-    core.fillStyle(0xffffff, 0.5).fillCircle(32, 32, 16);
-    core.fillStyle(0xffffff, 1).fillCircle(32, 32, 10);
-    core.generateTexture('enemy-carrier-3', 64, 64);
-    core.destroy();
+    this.dense('enemy-carrier-3', 64, 64, core => {
+      core.lineStyle(6, 0xffffff, 0.25).strokeCircle(32, 32, 27);
+      core.fillStyle(0xffffff, 0.18).fillCircle(32, 32, 24);
+      core.lineStyle(2.5, 0xffffff, 1).strokeCircle(32, 32, 24);
+      core.fillStyle(0xffffff, 0.5).fillCircle(32, 32, 16);
+      core.fillStyle(0xffffff, 1).fillCircle(32, 32, 10);
+    });
   }
 
   private fxTextures(): void {
-    const make = (key: string, w: number, h: number, draw: (g: Phaser.GameObjects.Graphics) => void) => {
-      const g = this.make.graphics({}, false);
-      draw(g);
-      g.generateTexture(key, w, h);
-      g.destroy();
-    };
+    const make = (key: string, w: number, h: number, draw: (g: Phaser.GameObjects.Graphics) => void) => this.dense(key, w, h, draw);
     // Player bolt: a capsule pointing +x (rotation = travel angle).
     make('bolt', 16, 8, g => {
       g.fillStyle(0xffffff, 0.3).fillRoundedRect(0, 0, 16, 8, 4);
@@ -120,13 +127,14 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0xffffff, 1).fillRect(2, 2, 4, 4);
     });
     make('dot', 4, 4, g => g.fillStyle(0xffffff, 1).fillRect(0, 0, 4, 4));
+    // Starfields stay full-size dense textures: tile sprites read the frame's pixel size (see view.starTile).
     const stars = (key: string, n: number, maxR: number) =>
-      make(key, 512, 512, g => {
+      this.dense(key, 512, 512, g => {
         for (let i = 0; i < n; i++) {
           g.fillStyle(i % 9 === 0 ? 0x9ef0ff : 0xffffff, 0.3 + Math.random() * 0.6);
           g.fillCircle(Math.random() * 512, Math.random() * 512, 0.5 + Math.random() * maxR);
         }
-      });
+      }, false);
     stars('stars-far', 140, 0.8);
     stars('stars-near', 45, 1.5);
   }

@@ -1,7 +1,7 @@
 # MODULAR: Q1 writeup
 
-**Play:** [PLAY LINK] (desktop browser first; phone works in portrait)
-**Code:** [GITHUB LINK]
+**Play:** https://rohan37kumar.github.io/MODULAR-src/ (desktop browser first; phone works in portrait)
+**Code:** https://github.com/rohan37kumar/MODULAR-src
 
 **Controls:** WASD or arrows to steer; weapons fire by themselves; Esc or P pauses. In the Forge Uplink, drag a part to move it, R or right-click to rotate, X or drag it to the bin to jettison, Enter to accept. On a phone: a floating virtual joystick, a pause button, and touch-drag in the Forge.
 
@@ -92,7 +92,7 @@ Free-to-play, with three streams and one hard rule.
 - **Survivor.io** shows the ceiling and the price: ~$75M in two months, ~$500k a day from ads, and constant pay-to-win complaints about its gear gacha. I'd take the ad placement and skip the gear wall.
 - **Balatro** ($9.99) and **Brotato** ($4.99) prove premium works here, and my research leaned that way. I chose F2P because Lila ships F2P and cosmetics hang off the snapshot. The cost is that F2P only pays if retention hits the Section 6 targets.
 
-"Double salvage" assumes the live game spends salvage on sideways unlocks like hulls. The prototype only counts it.
+"Double salvage" assumes the live game adds a salvage currency spent on sideways unlocks like hulls. The prototype has none: scrap drops were cut after a phone playtest, because they cluttered the screen and did nothing for most players.
 
 ## 5. AI
 

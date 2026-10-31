@@ -1,21 +1,23 @@
+import type Phaser from 'phaser';
 import { compileShot } from '../core/shot';
 import type { MountSpec, PartId, ShotSpec } from '../core/types';
 import { SIG_BY_ID } from '../data/signatures';
 import { Audio } from './Audio';
 import type { GameScene } from '../scenes/GameScene';
 import { applyHitEffects, blast } from './Effects';
-import type { Scrap } from './Pickups';
 import { CELL, COLOURS, type DamageSrc, type Enemy } from './runtime';
 import { MAX_HULL } from './Ship';
 import { leadAngle } from './WeaponSystem';
 
-/** Magnet scrap-feed (design §10). */
+/** Magnet slug feed (design §10): every kill on screen is 1 ammo (scrap drops were removed, user decision 2026-10-31). */
 const AMMO_MAX = 10;
 const AMMO_PER_SLUG = 2;
 const SLUG_EVERY_MS = 250;
 const SLUG_DAMAGE_MUL = 3;
 const COIN_COLOUR = SIG_BY_ID.coinSlinger.colour;
-const FEED_REACH = 22;
+/** The feed streak: wreck → Magnet, and how many may fly at once. */
+const STREAK_MS = 240;
+const STREAK_CAP = 16;
 /** Bulwark Plate. */
 export const BULWARK_TAKEN = 0.6;
 const BULWARK_TAKEN_BOOSTED = 1 - (1 - BULWARK_TAKEN) * 1.15;
@@ -24,7 +26,7 @@ const BULWARK_REFLECT = 10;
 const BULWARK_ACTIVE = ['charge', 'chill', 'ignite', 'warhead', 'harden'];
 
 /**
- * Utility parts at runtime: Magnet scrap-feed slugs, Repair Node regen, Thruster exhaust trail,
+ * Utility parts at runtime: Magnet kill-fed slugs, Repair Node regen, Thruster exhaust trail,
  * Bulwark damage reduction and its trait reactions. Event: 'scrap-slug' (magnet mountUid).
  */
 export class Utility {
@@ -32,10 +34,11 @@ export class Utility {
   private slugCd = new Map<number, number>();
   private trailCd = 0;
   private pulseCd = 0;
+  private streaks: { x: number; y: number; uid: number; t: number; coin: boolean }[] = [];
+  private readonly streakG: Phaser.GameObjects.Graphics;
 
   constructor(private readonly scene: GameScene) {
-    scene.pickups.onScrapNear = s => this.feed(s);
-    scene.pickups.pullTarget = () => this.hungryMagnet();
+    this.streakG = scene.add.graphics().setDepth(16).setBlendMode('ADD');
   }
 
   update(dtMs: number): void {
@@ -55,29 +58,36 @@ export class Utility {
       else if (m.partId === 'repair' && pulse) this.ring(ship.cellWorld(m.cell), COLOURS.utility, 0.35);
       else if (m.partId === 'thruster' && trail) this.exhaust(m);
     }
+    this.drawStreaks(dtMs);
   }
 
-  /** World position of the first feeding Magnet that still has room for ammo. */
-  private hungryMagnet(): { x: number; y: number } | null {
-    const ship = this.scene.ship;
-    const m = ship.loadout.mounts.find(x => x.partId === 'magnet' && x.feeds.length > 0 && (this.ammo.get(x.uid) ?? 0) < AMMO_MAX);
-    return m ? ship.cellWorld(m.cell) : null;
+  /** A kill inside the camera view feeds 1 ammo to the first slug-feeding Magnet with room. */
+  onKill(e: Enemy): void {
+    if (!this.scene.cameras.main.worldView.contains(e.x, e.y)) return;
+    const m = this.scene.ship.loadout.mounts.find(x => x.partId === 'magnet' && x.feeds.length > 0 && (this.ammo.get(x.uid) ?? 0) < AMMO_MAX);
+    if (!m) return;
+    this.ammo.set(m.uid, (this.ammo.get(m.uid) ?? 0) + 1);
+    if (this.streaks.length < STREAK_CAP) this.streaks.push({ x: e.x, y: e.y, uid: m.uid, t: 0, coin: m.signatures.includes('coinSlinger') });
   }
 
-  /** Scrap that reaches a feeding Magnet becomes ammo instead of salvage. */
-  private feed(s: Scrap): boolean {
+  /** Each streak's head races from the wreck to its Magnet (which moves with the ship), trailing a fading tail. */
+  private drawStreaks(dtMs: number): void {
+    const g = this.streakG;
+    g.clear();
+    if (!this.streaks.length) return;
     const ship = this.scene.ship;
-    for (const m of ship.loadout.mounts) {
-      if (m.partId !== 'magnet' || m.feeds.length === 0) continue;
-      const have = this.ammo.get(m.uid) ?? 0;
-      if (have >= AMMO_MAX) continue;
-      const c = ship.cellWorld(m.cell);
-      if ((s.x - c.x) ** 2 + (s.y - c.y) ** 2 > FEED_REACH ** 2) continue;
-      this.ammo.set(m.uid, have + 1);
-      this.scene.salvage++;
+    this.streaks = this.streaks.filter(st => {
+      st.t += dtMs;
+      const m = ship.loadout.mounts.find(x => x.uid === st.uid);
+      if (!m || st.t >= STREAK_MS) return false;
+      const end = ship.cellWorld(m.cell);
+      const head = 1 - (1 - st.t / STREAK_MS) ** 2, tail = Math.max(0, head - 0.35);
+      const at = (k: number) => ({ x: st.x + (end.x - st.x) * k, y: st.y + (end.y - st.y) * k });
+      const a = at(tail), b = at(head);
+      g.lineStyle(2, st.coin ? COIN_COLOUR : COLOURS.scrap, 0.85).lineBetween(a.x, a.y, b.x, b.y);
+      g.fillStyle(0xffffff, 0.9).fillCircle(b.x, b.y, 2);
       return true;
-    }
-    return false;
+    });
   }
 
   private fireSlugs(m: MountSpec, dtMs: number): void {

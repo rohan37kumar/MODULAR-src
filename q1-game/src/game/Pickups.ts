@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 import { ShipGrid } from '../core/grid';
-import { Pool } from '../core/pool';
 import type { Drop, PartId } from '../core/types';
 import { isNode, PARTS } from '../data/parts';
 import type { GameScene } from '../scenes/GameScene';
 import { COLOURS, FONT } from './runtime';
 import { partTexture } from './Ship';
+import { TEX } from './view';
 
 const PART_RADIUS = 11;
 const PART_LIFE_MS = 14_000;
@@ -17,8 +17,6 @@ const GRAPPLE_SPEED = 520;
 const BLINK_MS = 3_000;
 const BOUNCE_CD_MS = 500;
 const LABEL_RANGE = 130;
-const SCRAP_CAP = 400;
-const SCRAP_LIFE_MS = 14_000;
 const ITEM_LIFE_MS = 20_000;
 export const REPAIR_HEAL = 30;
 
@@ -38,49 +36,26 @@ interface Floating {
   reel: boolean;
 }
 
-export interface Scrap {
-  alive: boolean;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  img: Phaser.GameObjects.Image;
-}
-
 /**
- * Everything that floats: salvaged parts (auto-attach on touch), scrap, hull repair cores
+ * Everything that floats: salvaged parts (auto-attach on touch), hull repair cores
  * and Forge Uplinks. Events: 'part-attached' (PlacedPart), 'forge-picked', 'repair-picked'.
  */
 export class Pickups {
   private items: Floating[] = [];
-  readonly scrap: Scrap[] = [];
-  private readonly scrapPool: Pool<Scrap>;
   private readonly magnetRing: Phaser.GameObjects.Arc;
-  /** Called for each scrap mote near the ship; return true to consume it (Magnet scrap-feed, Task 12). */
-  onScrapNear: ((s: Scrap) => boolean) | null = null;
-  /** Where scrap inside the pickup radius is pulled to (a hungry Magnet); defaults to the ship centre. */
-  pullTarget: (() => { x: number; y: number } | null) | null = null;
 
   constructor(private readonly scene: GameScene) {
-    this.scrapPool = new Pool<Scrap>(SCRAP_CAP, () => ({
-      alive: false, x: 0, y: 0, vx: 0, vy: 0, life: 0,
-      img: scene.add.image(0, 0, 'scrap').setVisible(false).setDepth(8).setTint(COLOURS.scrap).setScale(0.8),
-    }));
     this.magnetRing = scene.add.circle(0, 0, 10).setStrokeStyle(1, COLOURS.utility, 0.18).setDepth(5).setVisible(false);
   }
 
   spawn(drop: Drop, x: number, y: number): void {
-    if (drop.type === 'scrap') {
-      for (let i = 0; i < drop.n; i++) this.spawnScrap(x, y);
-      return;
-    }
     const a = Math.random() * Math.PI * 2, sp = 30 + Math.random() * 40;
     const key = drop.type === 'part' ? partTexture(drop.part) : drop.type === 'forge' ? 'pickup-forge' : 'pickup-repair';
     const colour = drop.type === 'part' ? COLOURS.weapon : drop.type === 'forge' ? COLOURS.player : COLOURS.utility;
     const size = drop.type === 'part' ? 26 : 30;
     const img = this.scene.add.image(x, y, key).setDisplaySize(size, size).setDepth(9);
-    if (this.scene.renderer.type === Phaser.WEBGL) img.preFX?.addGlow(colour, 2, 0, false, 0.1, 6);
+    // Glow distance is in texture pixels, and the icon textures are TEX× dense.
+    if (this.scene.renderer.type === Phaser.WEBGL) img.preFX?.addGlow(colour, 2, 0, false, 0.1, 6 * TEX);
     const ring = this.scene.add.circle(x, y, 17).setStrokeStyle(2, colour, 0.7).setDepth(9);
     const label = drop.type === 'part'
       ? this.scene.add.text(x, y - 26, PARTS[drop.part].name, { fontFamily: FONT, fontSize: '11px', color: '#ffffff' }).setOrigin(0.5).setDepth(9).setAlpha(0)
@@ -89,23 +64,6 @@ export class Pickups {
       type: drop.type, part: drop.type === 'part' ? drop.part : null, x, y,
       vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: drop.type === 'part' ? PART_LIFE_MS : ITEM_LIFE_MS, cd: 0, img, ring, label, reel: false,
     });
-  }
-
-  private spawnScrap(x: number, y: number): void {
-    const s = this.scrapPool.acquire();
-    if (!s) {
-      this.scene.salvage++;
-      return;
-    }
-    const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 60;
-    s.alive = true;
-    s.x = x;
-    s.y = y;
-    s.vx = Math.cos(a) * sp;
-    s.vy = Math.sin(a) * sp;
-    s.life = SCRAP_LIFE_MS;
-    s.img.setPosition(x, y).setVisible(true).setAlpha(1);
-    this.scrap.push(s);
   }
 
   /** Is there a free cell (or, for a node, a free slot) left on the ship? */
@@ -199,50 +157,6 @@ export class Pickups {
     const radius = ship.loadout.stats.pickupRadius;
     const hasMagnet = ship.loadout.mounts.some(m => m.partId === 'magnet'); // resolved: a Mimic Magnet counts
     this.magnetRing.setVisible(hasMagnet).setPosition(ship.x, ship.y).setRadius(radius);
-    const target = this.pullTarget?.() ?? ship;
-    for (let i = this.scrap.length - 1; i >= 0; i--) {
-      const s = this.scrap[i];
-      s.life -= dtMs;
-      if (s.life <= 0) {
-        this.removeScrap(s);
-        continue;
-      }
-      const dx = ship.x - s.x, dy = ship.y - s.y;
-      const d = Math.hypot(dx, dy) || 1;
-      if (d < radius) {
-        if (this.onScrapNear?.(s)) {
-          this.removeScrap(s);
-          continue;
-        }
-        // Pulled in, faster the closer it gets.
-        const pull = 600 * (1 - d / radius) + 180;
-        const tx = target.x - s.x, ty = target.y - s.y, td = Math.hypot(tx, ty) || 1;
-        s.vx = (tx / td) * pull;
-        s.vy = (ty / td) * pull;
-      } else {
-        s.vx *= Math.pow(0.2, dt);
-        s.vy *= Math.pow(0.2, dt);
-      }
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
-      s.img.setPosition(s.x, s.y).setAlpha(s.life < 2000 ? s.life / 2000 : 1);
-      if (d < 18) {
-        this.scene.salvage++;
-        this.removeScrap(s);
-      }
-    }
-  }
-
-  removeScrap(s: Scrap): void {
-    if (!s.alive) return;
-    s.alive = false;
-    s.img.setVisible(false);
-    const i = this.scrap.indexOf(s);
-    if (i >= 0) {
-      this.scrap[i] = this.scrap[this.scrap.length - 1];
-      this.scrap.pop();
-    }
-    this.scrapPool.release(s);
   }
 
   private destroyItem(i: number): void {

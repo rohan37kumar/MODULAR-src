@@ -10,7 +10,7 @@ import type { GameScene } from '../scenes/GameScene';
 export const isDebug = () => new URLSearchParams(location.search).get('debug') === '1';
 
 export interface DebugApi {
-  state(): { scene: string; hull: number; timeMs: number; kills: number; parts: number; enemies: number; projectiles: number; fps: number; discovered: SignatureId[]; ship: { x: number; y: number; heading: number }; updateMs: number; renderMs: number; salvage: number; kinds: Record<string, number>; bullets: number; counts: Record<string, number>; status: Record<string, number>; floating: { type: string; part: PartId | null; x: number; y: number }[] };
+  state(): { scene: string; hull: number; timeMs: number; kills: number; parts: number; enemies: number; projectiles: number; fps: number; discovered: SignatureId[]; ship: { x: number; y: number; heading: number }; updateMs: number; renderMs: number; kinds: Record<string, number>; bullets: number; counts: Record<string, number>; status: Record<string, number>; floating: { type: string; part: PartId | null; x: number; y: number }[] };
   givePart(id: PartId, cell?: Cell, facing?: Dir): boolean;
   loadShip(j: ShipJSON): void;
   loadCombo(id: SignatureId): void;
@@ -55,7 +55,6 @@ export function installDebug(scene: GameScene): void {
       projectiles: scene.projectiles.count,
       fps: Math.round(scene.game.loop.actualFps),
       discovered: [...scene.save.discovered],
-      salvage: scene.salvage,
       kinds: scene.enemies.list.reduce((o, e) => ({ ...o, [e.kind]: (o[e.kind] ?? 0) + 1 }), {} as Record<string, number>),
       bullets: scene.enemies.bullets.length,
       counts: { ...counts },

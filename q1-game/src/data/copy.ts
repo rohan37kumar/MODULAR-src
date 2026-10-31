@@ -18,6 +18,8 @@ export const COPY = {
   jettison: 'Jettison',
   tagline: 'Salvage pilot vs. machine swarm. Their tech bolts on where it touches. Find what it does together.',
   intro: 'Salvage pilot. The swarm took this system. Its tech is yours if you can survive it.',
+  /** Under the intro: the first run is learn-by-doing; explanations live in the Archive afterwards. */
+  introNote: "No manual for alien tech, so just fly and grab what drops. When this run ends, the Xeno Archive unlocks: every part you picked up, and how it all works, explained.",
   hint: {
     desktop: 'WASD / arrows to steer. Weapons fire on their own.',
     touch: 'Drag anywhere to steer. Weapons fire on their own.',

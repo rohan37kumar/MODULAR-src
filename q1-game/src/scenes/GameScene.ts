@@ -23,6 +23,7 @@ import { SignatureEffects } from '../game/SignatureEffects';
 import { SignatureRuntime } from '../game/SignatureRuntime';
 import { Utility } from '../game/Utility';
 import { WeaponSystem } from '../game/WeaponSystem';
+import { DPR, PHONE, TEX, viewSize } from '../game/view';
 import type { ForgeData } from './ForgeScene';
 import type { HudScene } from './HudScene';
 
@@ -33,7 +34,8 @@ export interface GameInit {
 export interface RunResult {
   timeMs: number;
   kills: number;
-  salvage: number;
+  /** Modules on the final ship (cockpit excluded). */
+  parts: number;
   ship: ShipJSON;
   newThisRun: SignatureId[];
   firedThisRun: SignatureId[];
@@ -84,7 +86,6 @@ export class GameScene extends Phaser.Scene {
 
   timeMs = 0;
   kills = 0;
-  salvage = 0;
   /** Debug/slow-mo multiplier on simulated time. */
   timeScale = 1;
   god = false;
@@ -112,7 +113,6 @@ export class GameScene extends Phaser.Scene {
   init(): void {
     this.timeMs = 0;
     this.kills = 0;
-    this.salvage = 0;
     this.timeScale = 1;
     this.god = false;
     this.directorPaused = false;
@@ -132,8 +132,8 @@ export class GameScene extends Phaser.Scene {
     this.pacer = new DropPacer(mulberry32(seed ^ 0x9e3779b9), this.save.discovered.length === 0);
 
     this.stars = [
-      this.add.tileSprite(0, 0, 10, 10, 'stars-far').setScrollFactor(0).setDepth(-20).setAlpha(0.6),
-      this.add.tileSprite(0, 0, 10, 10, 'stars-near').setScrollFactor(0).setDepth(-19).setAlpha(0.9),
+      this.add.tileSprite(0, 0, 10, 10, 'stars-far').setScrollFactor(0).setDepth(-20).setAlpha(0.6).setScale(1 / TEX),
+      this.add.tileSprite(0, 0, 10, 10, 'stars-near').setScrollFactor(0).setDepth(-19).setAlpha(0.9).setScale(1 / TEX),
     ];
 
     this.fx = new Fx(this);
@@ -179,8 +179,9 @@ export class GameScene extends Phaser.Scene {
 
     const cam = this.cameras.main;
     cam.setBackgroundColor('#000');
-    // Bloom under WebGL only (the Canvas renderer has no FX pipeline).
-    if (this.renderer.type === Phaser.WEBGL) cam.postFX.addBloom(0xffffff, 1, 1, 1, 0.9, 4);
+    // Bloom under WebGL only (the Canvas renderer has no FX pipeline). Its offsets are device pixels.
+    // Phones get 2 blur steps instead of 4 (about half the full-screen passes), a touch stronger to keep the glow.
+    if (this.renderer.type === Phaser.WEBGL) cam.postFX.addBloom(0xffffff, DPR, DPR, 1, PHONE ? 1.05 : 0.9, PHONE ? 2 : 4);
     cam.startFollow(this.ship.container, false, 0.2, 0.2);
     this.layout();
     const onResize = () => this.layout();
@@ -209,18 +210,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   private layout(): void {
-    const { width: w, height: h } = this.scale;
+    const { w, h } = viewSize(this);
     this.baseZoom = Phaser.Math.Clamp(Math.min(w, h) / 720, 0.6, 1.2);
     this.applyZoom(this.baseZoom * this.zoomMul, true);
   }
 
-  /** Sets the camera zoom; the star layers are re-sized only when it has moved enough to matter. */
+  /** Sets the camera zoom (in CSS px; the camera carries DPR on top); the star layers are re-sized only when it has moved enough to matter. */
   private applyZoom(zoom: number, force = false): void {
-    this.cameras.main.setZoom(zoom);
+    this.cameras.main.setZoom(zoom * DPR);
     if (!force && Math.abs(zoom - this.starZoom) <= 0.002) return;
     this.starZoom = zoom;
-    const { width: w, height: h } = this.scale;
-    for (const s of this.stars) s.setSize(w / zoom + 4, h / zoom + 4).setPosition(w / 2, h / 2);
+    const { w, h } = viewSize(this);
+    // Unscrolled layers sit on the camera's zoom origin, its centre in device pixels; sized at TEX× and scaled back.
+    for (const s of this.stars) s.setSize((w / zoom + 4) * TEX, (h / zoom + 4) * TEX).setPosition(this.scale.width / 2, this.scale.height / 2);
   }
 
   /** The view pulls back as the ship grows and while a Carrier is on the field (eased over ~1.5 s, real time). */
@@ -246,8 +248,8 @@ export class GameScene extends Phaser.Scene {
     if (this.pendingForge && !this.ended) this.openForge();
     this.easeZoom(real);
     const cam = this.cameras.main;
-    this.stars[0].setTilePosition(cam.scrollX * 0.15, cam.scrollY * 0.15);
-    this.stars[1].setTilePosition(cam.scrollX * 0.4, cam.scrollY * 0.4);
+    this.stars[0].setTilePosition(cam.scrollX * 0.15 * TEX, cam.scrollY * 0.15 * TEX);
+    this.stars[1].setTilePosition(cam.scrollX * 0.4 * TEX, cam.scrollY * 0.4 * TEX);
     // The score opens up after 3:00 (Task 21).
     Audio.setIntensity((this.timeMs - 180000) / 240000);
     this.updateMs = this.updateMs * 0.9 + (performance.now() - t0) * 0.1;
@@ -360,6 +362,7 @@ export class GameScene extends Phaser.Scene {
     this.kills++;
     this.fx.burst(e.x, e.y, BASE_TINT[e.kind], 6 + Math.floor(Math.random() * 5));
     Audio.sfx('kill', { vol: 0.6 });
+    this.utility.onKill(e);
     for (const d of this.pacer.onKill(e.kind, this.timeMs)) this.pickups.spawn(d, e.x, e.y);
   }
 
@@ -424,7 +427,7 @@ export class GameScene extends Phaser.Scene {
     Audio.sfx('death');
     Audio.setIntensity(0);
     const result: RunResult = {
-      timeMs: this.timeMs, kills: this.kills, salvage: this.salvage, ship: this.ship.grid.toJSON(),
+      timeMs: this.timeMs, kills: this.kills, parts: this.ship.grid.parts().filter(p => p.uid !== 0).length, ship: this.ship.grid.toJSON(),
       newThisRun: [...this.sigs.newThisRun], firedThisRun: [...this.sigs.firedThisRun], blueprints: [...this.sigs.blueprintsThisRun],
     };
     this.events.emit('run-ended', result);

@@ -49,7 +49,7 @@ export interface Loadout {
   stats: { speedMul: number; pickupRadius: number; regenPerSec: number };
 }
 
-export type Drop = { type: 'part'; part: PartId } | { type: 'forge' } | { type: 'repair' } | { type: 'scrap'; n: number };
+export type Drop = { type: 'part'; part: PartId } | { type: 'forge' } | { type: 'repair' };
 export interface SpawnEvent { kind: EnemyKind; count: number }
 export interface SaveData {
   version: 1; discovered: SignatureId[]; blueprints: PartId[];

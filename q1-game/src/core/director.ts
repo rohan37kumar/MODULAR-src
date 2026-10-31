@@ -1,4 +1,3 @@
-import { ENEMIES } from '../data/enemies';
 import { LOOSE_PART_IDS, PARTS } from '../data/parts';
 import { TUNING, type BudgetKind } from '../data/tuning';
 import { intRange, pick, range, type Rng } from './rng';
@@ -85,7 +84,7 @@ export class SpawnDirector {
 }
 
 /**
- * Decides what each kill drops (design §12): scrap always, parts on a paced chance,
+ * Decides what each kill drops (design §12): parts on a paced chance,
  * Forge Uplinks on a timer, and a Carrier's guaranteed haul.
  */
 export class DropPacer {
@@ -102,7 +101,7 @@ export class DropPacer {
   }
 
   onKill(kind: EnemyKind, nowMs: number): Drop[] {
-    const out: Drop[] = [{ type: 'scrap', n: ENEMIES[kind].scrap }];
+    const out: Drop[] = [];
 
     if (kind === 'carrier') {
       const n = intRange(this.rng, P.carrierParts.min, P.carrierParts.max);

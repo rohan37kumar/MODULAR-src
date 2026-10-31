@@ -8,6 +8,7 @@ import { SIGNATURES } from '../data/signatures';
 import { COLOURS, FONT } from '../game/runtime';
 import { partTexture } from '../game/Ship';
 import { button, drawShip, hex, shipExtent } from '../game/ui';
+import { DPR, starTile, uiCamera, viewSize } from '../game/view';
 import { storage } from './GameScene';
 
 export interface ArchiveData {
@@ -45,6 +46,7 @@ export class ArchiveScene extends Phaser.Scene {
   }
 
   create(): void {
+    uiCamera(this);
     this.build();
     const onResize = () => this.build();
     this.scale.on('resize', onResize);
@@ -53,7 +55,7 @@ export class ArchiveScene extends Phaser.Scene {
     const cam = this.cameras.main;
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => this.scrollTo(cam.scrollY + dy));
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (p.isDown) this.scrollTo(cam.scrollY - (p.y - p.prevPosition.y));
+      if (p.isDown) this.scrollTo(cam.scrollY - (p.y - p.prevPosition.y) / DPR);
     });
     const back = () => this.scene.start(this.data0.back, this.data0.backData);
     this.input.keyboard?.once('keydown-ESC', back);
@@ -66,9 +68,9 @@ export class ArchiveScene extends Phaser.Scene {
 
   private build(): void {
     this.children.removeAll(true);
-    const { width: w, height: h } = this.scale;
+    const { w, h } = viewSize(this);
     const save = loadSave(storage());
-    this.add.tileSprite(w / 2, h / 2, w, h, 'stars-far').setAlpha(0.5).setScrollFactor(0);
+    starTile(this, w / 2, h / 2, w, h, 'stars-far').setAlpha(0.5).setScrollFactor(0);
 
     const cols = Phaser.Math.Clamp(Math.floor((w - 32 + GAP) / (260 + GAP)), 1, 5);
     const cardW = Math.min(340, (w - 32 - GAP * (cols - 1)) / cols);

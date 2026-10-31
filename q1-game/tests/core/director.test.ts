@@ -51,14 +51,14 @@ test('unseeded: never the same part three times in a row; deterministic per seed
 });
 
 // Extra coverage beyond the plan.
-test('every kill pays scrap; motes never drop parts', () => {
+test('motes never drop parts; a Carrier always drops parts and a Forge Uplink', () => {
   const p = new DropPacer(mulberry32(8), false);
   for (let t = 1000; t <= 120_000; t += 500) {
-    const d = p.onKill('mote', t);
-    expect(d.filter(x => x.type === 'scrap')).toEqual([{ type: 'scrap', n: 1 }]);
-    expect(d.some(x => x.type === 'part')).toBe(false);
+    expect(p.onKill('mote', t).some(x => x.type === 'part')).toBe(false);
   }
-  expect(new DropPacer(mulberry32(8), false).onKill('carrier', 1000)).toContainEqual({ type: 'scrap', n: 20 });
+  const haul = new DropPacer(mulberry32(8), false).onKill('carrier', 1000);
+  expect(haul.some(x => x.type === 'part')).toBe(true);
+  expect(haul).toContainEqual({ type: 'forge' });
 });
 test('mote packs are one event of 6–10; per-call cap holds every frame and carriers are never lost', () => {
   const d = new SpawnDirector(mulberry32(9)); let carriers = 0;

@@ -9,6 +9,7 @@ import type { GameScene } from '../scenes/GameScene';
 import { Audio } from './Audio';
 import { COLOURS, FONT, type DamageSrc, type Enemy, type EnemyBullet } from './runtime';
 import { Status } from './Status';
+import { DPR } from './view';
 
 export const MAX_ENEMIES = 300;
 /** One P2 Carrier keeps ~120 bullets alive; two plus late Spitters overflowed 200 and silently dropped shots. */
@@ -702,7 +703,8 @@ export class EnemySystem {
     }
     const cam = this.scene.cameras.main;
     const view = cam.worldView;
-    const z = cam.zoom || 1;
+    // Screen-constant sizes: the world zoom without the DPR factor every camera carries.
+    const z = (cam.zoom || 1) / DPR;
     const margin = 36 / z;
     const hw = Math.max(1, view.width / 2 - margin);
     const hh = Math.max(1, view.height / 2 - margin);

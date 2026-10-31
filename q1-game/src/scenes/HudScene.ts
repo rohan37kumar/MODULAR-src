@@ -3,6 +3,7 @@ import { COPY } from '../data/copy';
 import { Hud } from '../game/Hud';
 import { FONT } from '../game/runtime';
 import { button, muteToggle } from '../game/ui';
+import { uiCamera, viewSize } from '../game/view';
 import type { GameScene } from './GameScene';
 
 /** Touch target of the pause button (px). */
@@ -26,6 +27,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   create(): void {
+    uiCamera(this);
     this.overlay = null;
     this.hud = new Hud(this);
     // First run of a save: one control hint, faded after 5 s or on the first steer (design §6).
@@ -54,7 +56,7 @@ export class HudScene extends Phaser.Scene {
 
   private layout(): void {
     this.hud.layout();
-    this.pauseBtn.setPosition(this.scale.width - PAUSE_SIZE / 2 - 10, PAUSE_SIZE / 2 + 10);
+    this.pauseBtn.setPosition(viewSize(this).w - PAUSE_SIZE / 2 - 10, PAUSE_SIZE / 2 + 10);
     if (this.overlay) {
       this.overlay.destroy();
       this.overlay = null;
@@ -65,7 +67,7 @@ export class HudScene extends Phaser.Scene {
   /** Called by GameScene.pause(). */
   showPause(): void {
     if (this.overlay) return;
-    const { width: w, height: h } = this.scale;
+    const { w, h } = viewSize(this);
     const dim = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.7).setInteractive();
     const title = this.add.text(w / 2, h * 0.36, 'PAUSED', { fontFamily: FONT, fontSize: '36px', color: '#00e5ff', fontStyle: 'bold' })
       .setOrigin(0.5).setLetterSpacing(6).setShadow(0, 0, '#00e5ff', 14, true, true);

@@ -9,6 +9,7 @@ import { fmtTime } from '../game/Hud';
 import { COLOURS, FONT } from '../game/runtime';
 import { partTexture } from '../game/Ship';
 import { button, muteToggle } from '../game/ui';
+import { starTile, uiCamera, viewSize } from '../game/view';
 import { storage } from './GameScene';
 
 /** Title: Launch, the Xeno Archive, Blueprint starts and the best run. First launch of a save shows the intro card. */
@@ -22,6 +23,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    uiCamera(this);
     this.save = loadSave(storage());
     // The score starts here (it begins on the first click or key: browsers block audio until then).
     Audio.setMuted(this.save.muted);
@@ -46,9 +48,9 @@ export class TitleScene extends Phaser.Scene {
 
   private build(): void {
     this.children.removeAll(true);
-    const { width: w, height: h } = this.scale;
-    this.add.tileSprite(w / 2, h / 2, w, h, 'stars-far').setAlpha(0.6);
-    this.add.tileSprite(w / 2, h / 2, w, h, 'stars-near').setAlpha(0.8);
+    const { w, h } = viewSize(this);
+    starTile(this, w / 2, h / 2, w, h, 'stars-far').setAlpha(0.6);
+    starTile(this, w / 2, h / 2, w, h, 'stars-near').setAlpha(0.8);
     const cx = w / 2;
     let y = h * 0.2;
 
@@ -128,14 +130,17 @@ export class TitleScene extends Phaser.Scene {
   private showIntro(): void {
     if (this.introOpen) return;
     this.introOpen = true;
-    const { width: w, height: h } = this.scale;
-    const dim = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.85).setInteractive();
+    const { w, h } = viewSize(this);
+    const dim = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.93).setInteractive();
     const text = this.add.text(w / 2, h * 0.42, COPY.intro, {
       fontFamily: FONT, fontSize: '22px', color: '#d8f6ff', align: 'center', wordWrap: { width: Math.min(560, w - 48) }, lineSpacing: 8,
     }).setOrigin(0.5);
-    const go = button(this, w / 2, h * 0.42 + text.height / 2 + 60, 'FLY', () => this.startRun(), { size: 26, primary: true });
-    for (const o of [dim, text, go]) o.setAlpha(0);
-    this.tweens.add({ targets: [dim, text, go], alpha: 1, duration: 300 });
+    const note = this.add.text(w / 2, h * 0.42 + text.height / 2 + 24, COPY.introNote, {
+      fontFamily: FONT, fontSize: '15px', color: '#b388ff', align: 'center', wordWrap: { width: Math.min(480, w - 56) }, lineSpacing: 5,
+    }).setOrigin(0.5, 0);
+    const go = button(this, w / 2, note.y + note.height + 48, 'FLY', () => this.startRun(), { size: 26, primary: true });
+    for (const o of [dim, text, note, go]) o.setAlpha(0);
+    this.tweens.add({ targets: [dim, text, note, go], alpha: 1, duration: 300 });
   }
 
   private startRun(): void {

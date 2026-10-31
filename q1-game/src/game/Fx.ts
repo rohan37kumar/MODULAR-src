@@ -2,6 +2,10 @@ import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
 import type { HudScene } from '../scenes/HudScene';
 import { FONT } from './runtime';
+import { DPR } from './view';
+
+/** Live spark ceiling (playtest 2026-10-31: phones stuttered in chain blasts). */
+const SPARK_CAP = 160;
 
 type Pt = { x: number; y: number };
 
@@ -30,6 +34,8 @@ export class Fx {
     this.sparks = scene.add.particles(0, 0, 'spark', {
       speed: { min: 60, max: 240 }, lifespan: { min: 220, max: 420 }, scale: { start: 1.1, end: 0 },
       alpha: { start: 1, end: 0 }, blendMode: 'ADD', emitting: false,
+      // Chain blasts fired 30+ bursts in one frame (330 live sparks); extra sparks past the ceiling are skipped.
+      maxAliveParticles: SPARK_CAP,
     }).setDepth(18);
   }
 
@@ -91,7 +97,8 @@ export class Fx {
   /** Shake by about `px` screen pixels. */
   shake(px: number, ms: number): void {
     const cam = this.scene.cameras.main;
-    cam.shake(ms, px / Math.max(1, cam.width), true);
+    // Phaser scales the offset by width × zoom², and both carry DPR: divide one DPR² back out.
+    cam.shake(ms, px / Math.max(1, cam.width * DPR), true);
   }
 
   /** A thin line through `pts` (re-read every frame so it follows the ship). */

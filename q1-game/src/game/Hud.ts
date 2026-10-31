@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SIGNATURES } from '../data/signatures';
 import { STICK_RADIUS, type Stick } from './Input';
 import { COLOURS, FONT } from './runtime';
+import { viewSize } from './view';
 
 export interface HudState {
   hull: number;
@@ -50,16 +51,16 @@ export class Hud {
   }
 
   layout(): void {
-    this.time.setX(this.scene.scale.width / 2);
+    this.time.setX(viewSize(this.scene).w / 2);
     this.lastHull = -1;
-    this.bannerBox?.setX(this.scene.scale.width / 2);
-    this.hintText?.setPosition(this.scene.scale.width / 2, this.scene.scale.height * 0.72);
+    this.bannerBox?.setX(viewSize(this.scene).w / 2);
+    this.hintText?.setPosition(viewSize(this.scene).w / 2, viewSize(this.scene).h * 0.72);
   }
 
   update(s: HudState): void {
     if (s.hull !== this.lastHull) {
       this.lastHull = s.hull;
-      const w = Math.min(220, this.scene.scale.width * 0.34);
+      const w = Math.min(220, viewSize(this.scene).w * 0.34);
       const f = Math.max(0, s.hull / s.maxHull);
       this.bar.clear();
       this.bar.lineStyle(2, COLOURS.player, 0.9).strokeRect(16, 14, w, 14);
@@ -102,7 +103,7 @@ export class Hud {
 
   /** The first-run control hint, under the ship. */
   hint(text: string): void {
-    const { width: w, height: h } = this.scene.scale;
+    const { w, h } = viewSize(this.scene);
     this.hintText = this.scene.add.text(w / 2, h * 0.72, text, {
       fontFamily: FONT, fontSize: '18px', color: '#d8f6ff', align: 'center', wordWrap: { width: Math.min(560, w - 32) },
     }).setOrigin(0.5).setShadow(0, 0, '#00e5ff', 8, true, true);
@@ -110,7 +111,7 @@ export class Hud {
 
   /** A one-off teaching line (the first node weld), below the control hint's spot: holds for `ms`, then fades. Steering doesn't dismiss it. */
   notice(text: string, ms = NOTICE_MS): void {
-    const { width: w, height: h } = this.scene.scale;
+    const { w, h } = viewSize(this.scene);
     const t = this.scene.add.text(w / 2, h * 0.8, text, {
       fontFamily: FONT, fontSize: '17px', color: '#d8f6ff', align: 'center', wordWrap: { width: Math.min(520, w - 32) },
     }).setOrigin(0.5).setShadow(0, 0, '#00e5ff', 8, true, true);
@@ -120,7 +121,7 @@ export class Hud {
   /** The discovery banner: header, signature name and the analysis AI's quip. Replaces any banner showing. */
   banner(title: string, sub: string, colour: number): void {
     this.bannerBox?.destroy();
-    const { width: w, height: h } = this.scene.scale;
+    const { w, h } = viewSize(this.scene);
     const wrap = Math.min(560, w - 32);
     const head = this.scene.add.text(0, 0, 'XENO ARCHIVE · NEW ENTRY', { fontFamily: FONT, fontSize: '13px', color: '#b388ff' })
       .setOrigin(0.5, 0).setLetterSpacing(3);
@@ -148,7 +149,7 @@ export class Hud {
 
   /** A one-line notice under the banner area (e.g. "Blueprint unlocked: Mirror"). */
   toast(text: string, colour: number): void {
-    const { width: w, height: h } = this.scene.scale;
+    const { w, h } = viewSize(this.scene);
     const t = this.scene.add.text(w / 2, Math.round(h * 0.16) - 34, text, {
       fontFamily: FONT, fontSize: '15px', color: hex(colour),
     }).setOrigin(0.5, 0.5).setDepth(51).setAlpha(0).setShadow(0, 0, hex(colour), 8, true, true);

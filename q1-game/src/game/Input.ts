@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { pointerXY, viewSize } from './view';
 
 type Keys = Record<'w' | 'a' | 's' | 'd' | 'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
 
@@ -46,15 +47,17 @@ export class Input {
 
   private down(scene: Phaser.Scene, p: Phaser.Input.Pointer): void {
     if (this.stick.active) return;
-    const { width: w, height: h } = scene.scale;
-    if (h <= w && p.x > w * 0.6) return;
+    const { w, h } = viewSize(scene);
+    const { x, y } = pointerXY(p);
+    if (h <= w && x > w * 0.6) return;
     this.pointerId = p.id;
-    Object.assign(this.stick, { active: true, baseX: p.x, baseY: p.y, dx: 0, dy: 0 });
+    Object.assign(this.stick, { active: true, baseX: x, baseY: y, dx: 0, dy: 0 });
   }
 
   private move(p: Phaser.Input.Pointer): void {
     if (!this.stick.active || p.id !== this.pointerId) return;
-    let dx = p.x - this.stick.baseX, dy = p.y - this.stick.baseY;
+    const { x, y } = pointerXY(p);
+    let dx = x - this.stick.baseX, dy = y - this.stick.baseY;
     const d = Math.hypot(dx, dy);
     if (d > STICK_RADIUS) {
       dx *= STICK_RADIUS / d;

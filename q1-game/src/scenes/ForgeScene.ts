@@ -10,11 +10,11 @@ import { COPY } from '../data/copy';
 import { cardLines, moduleKind } from '../data/modules';
 import { isNode, PARTS } from '../data/parts';
 import { octagonPoints, partColour } from '../data/partShapes';
-import { SIG_BY_ID } from '../data/signatures';
 import { Audio } from '../game/Audio';
 import {
   cellCenter, computeForgeLayout, diamondPoints, hitRect, nearestSlot, pointToCell, type ForgeLayout, type Rect,
 } from '../game/forgeLayout';
+import { pointerXY, uiCamera, viewSize } from '../game/view';
 
 export interface ForgeData {
   /** The live grid. The Forge edits a clone and never touches this instance. */
@@ -188,13 +188,13 @@ export class ForgeScene extends Phaser.Scene {
   private buttons!: Record<ButtonId, ButtonView>;
   private partViews = new Map<number, Phaser.GameObjects.Container>();
   /** Pooled signature-name labels; extras are hidden, never leaked. */
-  private glowLabels: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super('Forge');
   }
 
   create(data: ForgeData): void {
+    uiCamera(this);
     // The scene instance is reused across launches, so reset every field.
     this.cfg = data;
     this.grid = data.grid.clone();
@@ -216,9 +216,8 @@ export class ForgeScene extends Phaser.Scene {
     this.fx = new Set();
     this.openFlicker = null;
     this.partViews = new Map();
-    this.glowLabels = [];
     this.tutorial = null;
-    this.L = computeForgeLayout(this.scale.width, this.scale.height);
+    this.L = computeForgeLayout(viewSize(this).w, viewSize(this).h);
 
     this.dimGfx = this.add.graphics().setDepth(D.dim);
     this.gridGfx = this.add.graphics().setDepth(D.grid);
@@ -306,7 +305,6 @@ export class ForgeScene extends Phaser.Scene {
     this.partViews.clear();
     this.fx.clear();
     this.openFlicker = null;
-    this.glowLabels = [];
     this.routes = [];
     this.tethers = [];
   }
@@ -322,7 +320,7 @@ export class ForgeScene extends Phaser.Scene {
     for (const o of this.fx) o.destroy();
     this.fx.clear();
     this.dropGfx.clear();
-    this.L = computeForgeLayout(this.scale.width, this.scale.height);
+    this.L = computeForgeLayout(viewSize(this).w, viewSize(this).h);
     this.layoutStatic();
     this.refresh();
   }
@@ -414,16 +412,17 @@ export class ForgeScene extends Phaser.Scene {
 
   private onPointerDown(p: Phaser.Input.Pointer): void {
     if (this.accepted || this.drag) return;
+    const { x, y } = pointerXY(p);
     const right = p.rightButtonDown();
 
     for (const id of BUTTON_IDS) {
-      if (hitRect(this.L.buttons[id], p.x, p.y)) {
+      if (hitRect(this.L.buttons[id], x, y)) {
         if (!right) this.pressed = id;
         return;
       }
     }
 
-    const part = this.partAt(p.x, p.y);
+    const part = this.partAt(x, y);
     if (part && part.uid === 0) {
       // The cockpit is locked: show the glyph, never select it.
       this.selected = null;
@@ -437,7 +436,7 @@ export class ForgeScene extends Phaser.Scene {
         this.rotatePart(part.uid); // refreshes
         return;
       }
-      this.drag = { uid: part.uid, pointerId: p.id, startX: p.x, startY: p.y, x: p.x, y: p.y, active: false };
+      this.drag = { uid: part.uid, pointerId: p.id, startX: x, startY: y, x: x, y: y, active: false };
       this.refresh();
       return;
     }
@@ -450,10 +449,11 @@ export class ForgeScene extends Phaser.Scene {
 
   private onPointerMove(p: Phaser.Input.Pointer): void {
     if (this.accepted) return;
+    const { x, y } = pointerXY(p);
     const d = this.drag;
     if (!d) {
       // A node on one of the cockpit's corners is not the cockpit.
-      const under = this.partAt(p.x, p.y);
+      const under = this.partAt(x, y);
       this.lockHover = under?.uid === 0;
       this.updateLock();
       const hovered = under && under.uid !== 0 && !this.cfg.touch ? under.uid : null;
@@ -464,10 +464,10 @@ export class ForgeScene extends Phaser.Scene {
       return;
     }
     if (p.id !== d.pointerId) return;
-    d.x = p.x;
-    d.y = p.y;
+    d.x = x;
+    d.y = y;
     const threshold = this.cfg.touch ? 10 : 6;
-    if (!d.active && Math.hypot(p.x - d.startX, p.y - d.startY) > threshold) d.active = true;
+    if (!d.active && Math.hypot(x - d.startX, y - d.startY) > threshold) d.active = true;
     if (d.active) this.updateDragVisuals();
   }
 
@@ -495,17 +495,18 @@ export class ForgeScene extends Phaser.Scene {
 
   private release(p: Phaser.Input.Pointer, outsideCanvas: boolean): void {
     if (this.accepted) return;
+    const { x, y } = pointerXY(p);
     const pressed = this.pressed;
     this.pressed = null;
     if (pressed) {
-      if (!outsideCanvas && hitRect(this.L.buttons[pressed], p.x, p.y)) this.activate(pressed);
+      if (!outsideCanvas && hitRect(this.L.buttons[pressed], x, y)) this.activate(pressed);
       return;
     }
     const d = this.drag;
     if (!d || p.id !== d.pointerId) return;
     this.drag = null;
     this.dropGfx.clear();
-    const settle = d.active ? this.drop(d.uid, p.x, p.y, outsideCanvas) : null;
+    const settle = d.active ? this.drop(d.uid, x, y, outsideCanvas) : null;
     this.refresh();
     settle?.(); // runs on the rebuilt view
   }
@@ -740,7 +741,7 @@ export class ForgeScene extends Phaser.Scene {
     let dy = view.y - cy;
     const n = Math.hypot(dx, dy);
     if (n < 1) { dx = 0; dy = 1; } else { dx /= n; dy /= n; }
-    const dist = Math.hypot(this.scale.width, this.scale.height) + this.L.cell;
+    const dist = Math.hypot(viewSize(this).w, viewSize(this).h) + this.L.cell;
     view.setDepth(D.fx);
     this.tweens.add({
       targets: view, x: view.x + dx * dist, y: view.y + dy * dist, rotation: view.rotation + JETTISON_SPIN,
@@ -785,7 +786,7 @@ export class ForgeScene extends Phaser.Scene {
 
   /** Everything that depends only on the screen size. */
   private layoutStatic(): void {
-    const { width: w, height: h } = this.scale;
+    const { w, h } = viewSize(this);
     const L = this.L;
     const compact = L.portrait || w < 900;
 
@@ -1069,12 +1070,10 @@ export class ForgeScene extends Phaser.Scene {
     g.lineStyle(1, CYAN, 0.35).lineBetween(L.gridX, lead, L.gridX + size, lead);
   }
 
-  /** Gold name and outlines for every signature on the working grid that the Archive already knows. */
+  /** Gold outlines for every signature on the working grid that the Archive already knows (no names: playtest 2026-10-31). */
   private drawGlow(grid: ShipGrid): void {
     const g = this.glowGfx.clear();
     const s = this.L.cell;
-    let used = 0;
-    const stacked = new Map<string, number>();
     for (const m of recogniseShip(grid)) {
       if (!this.discovered.has(m.id)) continue; // undiscovered combos stay secret
       const parts = m.uids.map(uid => grid.byUid(uid)).filter((p): p is PlacedPart => !!p);
@@ -1082,24 +1081,7 @@ export class ForgeScene extends Phaser.Scene {
       if (!cells.length) continue;
       g.lineStyle(2, GOLD, 1);
       parts.forEach((p, i) => g.strokePoints(outline(p.id, cells[i].x, cells[i].y, s - 6), true, true));
-      // Centred over the group, just above its topmost cell; labels that land on the same spot stack upward.
-      const x = cells.reduce((a, c) => a + c.x, 0) / cells.length;
-      const y = Math.min(...cells.map(c => c.y)) - s / 2 - 2;
-      const spot = `${Math.round(x)},${Math.round(y)}`;
-      const n = stacked.get(spot) ?? 0;
-      stacked.set(spot, n + 1);
-      this.glowLabel(used++).setText(SIG_BY_ID[m.id].name).setPosition(x, Math.max(16, y - n * 15)).setVisible(true);
     }
-    for (let i = used; i < this.glowLabels.length; i++) this.glowLabels[i].setVisible(false);
-  }
-
-  private glowLabel(i: number): Phaser.GameObjects.Text {
-    while (this.glowLabels.length <= i) {
-      this.glowLabels.push(this.add.text(0, 0, '', {
-        fontFamily: FONT, fontSize: '13px', fontStyle: 'bold', color: '#ffd740', stroke: '#000000', strokeThickness: 3,
-      }).setOrigin(0.5, 1).setDepth(D.glow));
-    }
-    return this.glowLabels[i];
   }
 
   private drawHighlights(): void {

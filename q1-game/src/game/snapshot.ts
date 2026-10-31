@@ -10,7 +10,7 @@ import { SIG_BY_ID, SIGNATURES } from '../data/signatures';
  */
 
 export interface SnapshotStats {
-  timeMs: number; kills: number; salvage: number;
+  timeMs: number; kills: number; parts: number;
   newThisRun: SignatureId[]; firedThisRun: SignatureId[];
   archiveCount: number;
   /** Parts newly unlocked as Blueprint starts this run (may be empty). */
@@ -359,7 +359,7 @@ function stats(ctx: Ctx, s: SnapshotStats): void {
   const cols: [string, string][] = [
     [formatRunTime(s.timeMs), 'RUN TIME'],
     [formatCount(s.kills), 'KILLS'],
-    [formatCount(s.salvage), 'SALVAGE'],
+    [formatCount(s.parts), 'PARTS'],
   ];
   cols.forEach(([value, label], i) => {
     const cx = 180 + i * 360;
