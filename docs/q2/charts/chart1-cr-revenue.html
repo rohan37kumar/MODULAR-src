@@ -1,0 +1,63 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>CR revenue</title>
+<style>
+  :root{ --surface-1:#fcfcfb; --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#8a8984; --grid:#e4e3df; --series-1:#2a78d6; }
+  html,body{margin:0;background:var(--surface-1);font-family:"Segoe UI",Arial,sans-serif;}
+</style></head>
+<body>
+<svg id="c" width="1200" height="640" viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+// AppMagic estimates, net of store fees (basis inferred), App Store + Google Play. $M.
+const data = [
+  {m:1,  v:12.0, label:"$12M"},          // Feb 2025, AppMagic blog
+  {m:4,  v:27.7},                        // May 2025, AppMagic (gamigion)
+  {m:6,  v:45.8},                        // Jul 2025, AppMagic blog
+  {m:7,  v:63.0},                        // Aug 2025, AppMagic blog (">$63M")
+  {m:8,  v:67.8, label:"$68M peak"},     // Sep 2025, AppMagic blog
+  {m:12, v:26.0, label:"$26M"},          // Jan 2026, mobilegamer.biz (AppMagic)
+];
+// m = months since Jan 2025 (0 = Jan 2025, 13 = Feb 2026)
+const X0=110, X1=1150, Y0=540, Y1=170, MMAX=13, VMAX=80;
+const x=m=>X0+(X1-X0)*m/MMAX, y=v=>Y0-(Y0-Y1)*v/VMAX;
+const svg=document.getElementById('c'); const NS="http://www.w3.org/2000/svg";
+const el=(t,a,txt)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;svg.appendChild(e);return e;};
+
+el('rect',{width:1200,height:640,fill:'var(--surface-1)'});
+el('text',{x:60,y:52,'font-size':26,'font-weight':600,fill:'var(--text-primary)'},"Clash Royale's comeback, and the crash after Level 16");
+el('text',{x:60,y:84,'font-size':17,fill:'var(--text-secondary)'},"Monthly player spending, net of store fees, $M. AppMagic estimates, App Store + Google Play.");
+
+// grid + y labels
+for(const v of [0,20,40,60,80]){
+  el('line',{x1:X0,x2:X1,y1:y(v),y2:y(v),stroke:'var(--grid)','stroke-width':1});
+  el('text',{x:X0-12,y:y(v)+6,'font-size':15,fill:'var(--text-muted)','text-anchor':'end'},v===0?'0':'$'+v+'M');
+}
+// x labels
+const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb"];
+mon.forEach((t,i)=>el('text',{x:x(i),y:Y0+26,'font-size':15,fill:'var(--text-muted)','text-anchor':'middle'},t));
+el('text',{x:x(5.5),y:Y0+52,'font-size':15,fill:'var(--text-secondary)','text-anchor':'middle'},'2025');
+el('text',{x:x(12.5),y:Y0+52,'font-size':15,fill:'var(--text-secondary)','text-anchor':'middle'},'2026');
+
+// event markers
+const ev=[{m:2.5,t:["Friction removed","(timers, keys; Mar–Apr)"]},{m:5.3,t:["Merge Tactics","(late Jun)"]},{m:10.77,t:["Level 16 + Heroes","(24 Nov)"]}];
+for(const e of ev){
+  el('line',{x1:x(e.m),x2:x(e.m),y1:Y1-38,y2:Y0,stroke:'var(--text-muted)','stroke-width':1,'stroke-dasharray':'3 4'});
+  e.t.forEach((s,i)=>el('text',{x:x(e.m)+6,y:Y1-46+i*18,'font-size':i?13:15,'font-weight':i?400:600,fill:i?'var(--text-muted)':'var(--text-secondary)'},s));
+}
+
+// segments: solid between consecutive months, dashed across gaps
+for(let i=0;i<data.length-1;i++){
+  const a=data[i],b=data[i+1],gap=b.m-a.m>1;
+  if(b.m-a.m>3){ // Oct–Dec: no net figures; don't imply a slope
+    el('text',{x:x(10.6),y:y(52),'text-anchor':'end','font-size':13,fill:'var(--text-muted)'},'Oct–Dec: no net figure published.');
+    el('text',{x:x(10.6),y:y(52)+18,'text-anchor':'end','font-size':13,fill:'var(--text-muted)'},'Oct gross was still near the peak.');
+    continue;
+  }
+  el('line',{x1:x(a.m),y1:y(a.v),x2:x(b.m),y2:y(b.v),stroke:'var(--series-1)','stroke-width':gap?2:2.5,'stroke-dasharray':gap?'6 6':'none','stroke-linecap':'round'});
+}
+for(const d of data){
+  el('circle',{cx:x(d.m),cy:y(d.v),r:6,fill:'var(--series-1)',stroke:'var(--surface-1)','stroke-width':2});
+  if(d.label) el('text',{x:x(d.m)+(d.m===12?12:0),y:y(d.v)-14,'font-size':16,'font-weight':600,fill:'var(--text-primary)','text-anchor':d.m===12?'start':'middle'},d.label);
+}
+el('text',{x:60,y:620,'font-size':14,fill:'var(--text-muted)'},"Dots are reported months; dashed lines cross a missing month. Net basis inferred from AppMagic's gross/net ratio (~0.7). Sources: AppMagic, mobilegamer.biz, pocketgamer.biz.");
+</script>
+</body></html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Gap map</title>
+<style>
+  :root{
+    --surface-1:#fcfcfb; --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#8a8984;
+    --grid:#e4e3df; --series-1:#2a78d6; --series-2:#eb6834;
+  }
+  html,body{margin:0;background:var(--surface-1);font-family:"Segoe UI",Arial,sans-serif;}
+  svg text{font-family:inherit}
+</style></head>
+<body>
+<svg width="1200" height="760" viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="var(--surface-1)"/>
+  <!-- title -->
+  <text x="60" y="52" font-size="26" font-weight="600" fill="var(--text-primary)">Every lane battler sells power. The fixed-power hits aren't lane battlers.</text>
+  <text x="60" y="84" font-size="17" fill="var(--text-secondary)">Where notable games sit on two design axes. Positions are qualitative.</text>
+
+  <!-- legend -->
+  <circle cx="66" cy="118" r="7" fill="var(--series-1)"/>
+  <text x="80" y="124" font-size="16" fill="var(--text-secondary)">Lane battler</text>
+  <circle cx="196" cy="118" r="7" fill="var(--series-2)"/>
+  <text x="210" y="124" font-size="16" fill="var(--text-secondary)">Other genre</text>
+
+  <!-- plot area: x 140..1140, y 150..690 ; mid x 640, mid y 420 -->
+  <rect x="140" y="150" width="1000" height="540" fill="none" stroke="var(--grid)" stroke-width="1"/>
+  <line x1="640" y1="150" x2="640" y2="690" stroke="var(--grid)" stroke-width="1"/>
+  <line x1="140" y1="420" x2="1140" y2="420" stroke="var(--grid)" stroke-width="1"/>
+
+  <!-- empty-square highlight -->
+  <rect x="662" y="172" width="456" height="226" rx="8" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="890" y="262" font-size="20" font-weight="600" fill="var(--text-primary)" text-anchor="middle">No lane battler here</text>
+  <text x="890" y="290" font-size="16" fill="var(--text-secondary)" text-anchor="middle">Fixed power, real-time 1v1:</text>
+  <text x="890" y="312" font-size="16" fill="var(--text-secondary)" text-anchor="middle">the gap a challenger can own</text>
+
+  <!-- axis labels -->
+  <text x="390" y="722" font-size="17" fill="var(--text-secondary)" text-anchor="middle">← Power for sale (card or unit levels)</text>
+  <text x="890" y="722" font-size="17" fill="var(--text-secondary)" text-anchor="middle">Fixed power (money buys looks and access) →</text>
+  <text transform="translate(108,285) rotate(-90)" font-size="17" fill="var(--text-secondary)" text-anchor="middle">Real-time head-to-head</text>
+  <text transform="translate(108,555) rotate(-90)" font-size="17" fill="var(--text-secondary)" text-anchor="middle">Turn-based or indirect</text>
+
+  <!-- top-left: power for sale, real-time -->
+  <circle cx="250" cy="230" r="9" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"/>
+  <text x="266" y="236" font-size="17" fill="var(--text-primary)">Clash Royale</text>
+  <circle cx="330" cy="300" r="9" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"/>
+  <text x="346" y="306" font-size="17" fill="var(--text-primary)">Warcraft Rumble</text>
+  <circle cx="230" cy="365" r="9" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"/>
+  <text x="246" y="371" font-size="17" fill="var(--text-primary)">Brawl Stars</text>
+
+  <!-- top-right: fixed power, real-time (not a lane battler) -->
+  <circle cx="1000" cy="365" r="9" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"/>
+  <text x="984" y="371" font-size="17" fill="var(--text-primary)" text-anchor="end">League of Legends</text>
+
+  <!-- bottom-right: fixed power, turn-based -->
+  <circle cx="760" cy="490" r="9" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"/>
+  <text x="776" y="496" font-size="17" fill="var(--text-primary)">Marvel Snap</text>
+  <circle cx="900" cy="570" r="9" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"/>
+  <text x="916" y="576" font-size="17" fill="var(--text-primary)">Pokémon TCG Pocket</text>
+  <circle cx="1010" cy="640" r="9" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"/>
+  <text x="994" y="646" font-size="17" fill="var(--text-primary)" text-anchor="end">Legends of Runeterra</text>
+</svg>
+</body></html>
